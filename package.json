@@ -1,0 +1,12 @@
+{
+    "name": "render-deploy-example",
+    "version": "1.0.0",
+    "main": "serveur.js",
+    "scripts": {
+      "start": "node serveur.js"
+    },
+    "dependencies": {
+      "express": "^4.17.1"
+    }
+  }
+  
