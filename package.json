@@ -3,10 +3,10 @@
     "version": "1.0.0",
     "main": "serveur.js",
     "scripts": {
-      "start": "node serveur.js"
+        "start": "node serveur.js"
     },
     "dependencies": {
-      "express": "^4.17.1"
+        "express": "^4.17.1",
+        "socket.io": "^4.7.5"
     }
-  }
-  
+}
