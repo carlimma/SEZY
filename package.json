@@ -1,9 +1,9 @@
 {
     "name": "render-deploy-example",
     "version": "1.0.0",
-    "main": "serveur.js",
+    "main": "./src/serveur.js",
     "scripts": {
-        "start": "node serveur.js"
+        "start": "node ./src/serveur.js"
     },
     "dependencies": {
         "bcrypt": "^5.1.1",
