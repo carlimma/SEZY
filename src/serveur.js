@@ -12,7 +12,7 @@ const io = new Server(server, {
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 const cors = require('cors');
-const { sequelize, Admin, Message, DateModel } = require('./database'); // Importer Sequelize et les modèles
+const sequelize = require('./database'); // Importer Sequelize
 
 app.use(cors());
 
@@ -32,7 +32,7 @@ io.on('connection', (socket) => {
   socket.on('nouveauMessage', async (data) => {
     try {
       const { name, email, phone, message } = data;
-      await Message.create({ name, email, phone, content: message });
+      await sequelize.models.Message.create({ name, email, phone, content: message });
       socket.emit('nouveauMessage', { success: true });
     } catch (err) {
       console.error(err.message);
@@ -44,7 +44,7 @@ io.on('connection', (socket) => {
   socket.on('connexionAdmin', async (data) => {
     try {
       const { username, password } = data;
-      const admin = await Admin.findOne({ where: { username } });
+      const admin = await sequelize.models.Admin.findOne({ where: { username } });
       if (admin && await bcrypt.compare(password, admin.password)) {
         console.log('Un utilisateur est connecté');
         socket.emit('connexionReussie');
@@ -60,7 +60,7 @@ io.on('connection', (socket) => {
   socket.on('nouvelleLivraison', async (data) => {
     try {
       const { date, destination, prix } = data;
-      await DateModel.create({ date, destination, prix });
+      await sequelize.models.Date.create({ date, destination, prix });
       socket.emit('dateAjoutee');
     } catch (err) {
       console.error(err.message);
@@ -71,7 +71,7 @@ io.on('connection', (socket) => {
   // Réception d'une demande de suppression de date
   socket.on('suppressionDate', async (id) => {
     try {
-      await DateModel.destroy({ where: { id } });
+      await sequelize.models.Date.destroy({ where: { id } });
       socket.emit('dateSupprimee');
     } catch (err) {
       console.error(err.message);
@@ -82,7 +82,7 @@ io.on('connection', (socket) => {
   // Envoi de toutes les dates présentes dans la base de données
   socket.on('obtenirDates', async () => {
     try {
-      const dates = await DateModel.findAll();
+      const dates = await sequelize.models.Date.findAll();
       socket.emit('toutesDates', dates);
     } catch (err) {
       console.error(err.message);
@@ -92,7 +92,7 @@ io.on('connection', (socket) => {
   // Envoi de tous les messages
   socket.on('getMessages', async () => {
     try {
-      const messages = await Message.findAll();
+      const messages = await sequelize.models.Message.findAll();
       socket.emit('getMessages', messages);
     } catch (err) {
       console.error(err.message);
@@ -102,7 +102,7 @@ io.on('connection', (socket) => {
   // Marquer un message comme lu
   socket.on('marquerLu', async (id) => {
     try {
-      await Message.update({ read: true }, { where: { id } });
+      await sequelize.models.Message.update({ read: true }, { where: { id } });
       socket.emit('marquerLu', id);
     } catch (err) {
       console.error(err.message);
@@ -124,7 +124,7 @@ io.on('connection', (socket) => {
       } else if (filter === 'unread') {
         where.read = false;
       }
-      const messages = await Message.findAll({ where });
+      const messages = await sequelize.models.Message.findAll({ where });
       socket.emit('getMessages', messages);
     } catch (err) {
       console.error(err.message);
@@ -144,7 +144,7 @@ const createDefaultAdmin = async () => {
   const hashedPassword = await bcrypt.hash(password, saltRounds);
 
   try {
-    await Admin.create({ username, password: hashedPassword });
+    await sequelize.models.Admin.create({ username, password: hashedPassword });
     console.log('Admin créé');
   } catch (err) {
     if (err.name === 'SequelizeUniqueConstraintError') {
