@@ -150,6 +150,7 @@ const createDefaultAdmin = async () => {
     if (err.name === 'SequelizeUniqueConstraintError') {
       console.log('Admin déjà créé');
     } else {
+      console.log('ICI');
       console.error(err.message);
     }
   }
