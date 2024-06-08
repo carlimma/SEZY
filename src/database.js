@@ -1,24 +1,29 @@
-// db.js
-const { Sequelize } = require('sequelize');
+const sqlite3 = require('sqlite3').verbose();
+const db = new sqlite3.Database('./database.db');
 
-// Créer une instance Sequelize
-const sequelize = new Sequelize('sezydb', 'sezydb_user', 'SvfXGPdXPK46HzmjGnIixilCFbn49abE', {
-  host: 'dpg-cphrd2ect0pc73fihjbg-a',
-  dialect: 'postgres',
-  port: 5432, // Par défaut pour PostgreSQL
+// Initialiser la base de données
+db.serialize(() => {
+  db.run(`CREATE TABLE IF NOT EXISTS admin (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    content TEXT NOT NULL,
+    read INTEGER DEFAULT 0
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS dates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    destination TEXT NOT NULL,
+    prix TEXT NOT NULL
+  )`);
 });
 
-// Importer les modèles après avoir créé l'instance Sequelize
-const Admin = require('./models/Admin');
-const Message = require('./models/Message');
-const DateModel = require('./models/Date');
-
-// Définir les associations entre les modèles ici si nécessaire
-
-// Exporter l'instance Sequelize et les modèles
-module.exports = {
-  sequelize,
-  Admin,
-  Message,
-  DateModel,
-};
+module.exports = db;

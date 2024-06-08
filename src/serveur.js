@@ -9,18 +9,16 @@ const io = new Server(server, {
     methods: ['GET', 'POST']
   }
 });
+const db = require('./database');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 const cors = require('cors');
-const { sequelize, Admin, Message, DateModel } = require('./database'); // Importer Sequelize et les modèles
-
 app.use(cors());
 
 // Middleware pour traiter les données JSON
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Servir les fichiers statiques
 app.use('/css', express.static(__dirname + '/css'));
 app.use('/js', express.static(__dirname + '/js'));
 app.use('/assets', express.static(__dirname + '/assets'));
@@ -29,112 +27,139 @@ app.use('/assets', express.static(__dirname + '/assets'));
 io.on('connection', (socket) => {
   
   // Réception d'un nouveau message
-  socket.on('nouveauMessage', async (data) => {
-    try {
-      const { name, email, phone, message } = data;
-      await Message.create({ name, email, phone, content: message });
-      socket.emit('nouveauMessage', { success: true });
-    } catch (err) {
-      console.error(err.message);
-      socket.emit('nouveauMessage', { success: false });
-    }
+  socket.on('nouveauMessage', (data) => {
+    const { name, email, phone, message } = data;
+    const stmt = db.prepare('INSERT INTO messages (name, email, phone, content) VALUES (?, ?, ?, ?)');
+    stmt.run(name, email, phone, message, function (err) {
+      if (err) {
+        console.error(err.message);
+        socket.emit('nouveauMessage', { "success": false });
+
+      } else {
+        socket.emit('nouveauMessage', { "success": true });
+
+      }
+    });
+    stmt.finalize();
   });
 
   // Réception d'une demande de connexion
-  socket.on('connexionAdmin', async (data) => {
-    try {
-      const { username, password } = data;
-      const admin = await Admin.findOne({ where: { username } });
-      if (admin && await bcrypt.compare(password, admin.password)) {
-        console.log('Un utilisateur est connecté');
-        socket.emit('connexionReussie');
-      } else {
+  socket.on('connexionAdmin', (data) => {
+    const { username, password } = data;
+    const stmt = db.prepare('SELECT * FROM admin WHERE username = ?');
+    stmt.get(username, (err, row) => {
+      if (err || !row) {
         socket.emit('erreurConnexion');
+      } else {
+        bcrypt.compare(password, row.password, (err, result) => {
+          if (result) {
+            console.log('Un utilisateur est connecté');
+            socket.emit('connexionReussie');
+          } else {
+            socket.emit('erreurConnexion');
+          }
+        });
       }
-    } catch (err) {
-      socket.emit('erreurConnexion');
-    }
+    });
+    stmt.finalize();
   });
 
   // Réception d'une demande d'ajout de date
-  socket.on('nouvelleLivraison', async (data) => {
-    try {
-      const { date, destination, prix } = data;
-      await DateModel.create({ date, destination, prix });
-      socket.emit('dateAjoutee');
-    } catch (err) {
-      console.error(err.message);
-      socket.emit('erreurAjoutDate');
-    }
+  socket.on('nouvelleLivraison', (data) => {
+    const { date, destination, prix } = data;
+    const stmt = db.prepare('INSERT INTO dates (date, destination, prix) VALUES (?, ?, ?)');
+    stmt.run(date, destination, prix, function (err) {
+      if (err) {
+        console.error(err.message);
+        socket.emit('erreurAjoutDate');
+      } else {
+        socket.emit('dateAjoutee');
+      }
+    });
+    stmt.finalize();
   });
 
   // Réception d'une demande de suppression de date
-  socket.on('suppressionDate', async (id) => {
-    try {
-      await DateModel.destroy({ where: { id } });
-      socket.emit('dateSupprimee');
-    } catch (err) {
-      console.error(err.message);
-      socket.emit('erreurSuppressionDate');
-    }
+  socket.on('suppressionDate', (id) => {
+    const stmt = db.prepare('DELETE FROM dates WHERE id = ?');
+    stmt.run(id, function (err) {
+      if (err) {
+        console.error(err.message);
+        socket.emit('erreurSuppressionDate');
+      } else {
+        socket.emit('dateSupprimee');
+      }
+    });
+    stmt.finalize();
   });
 
   // Envoi de toutes les dates présentes dans la base de données
-  socket.on('obtenirDates', async () => {
-    try {
-      const dates = await DateModel.findAll();
-      socket.emit('toutesDates', dates);
-    } catch (err) {
-      console.error(err.message);
-    }
+  socket.on('obtenirDates', () => {
+    db.all('SELECT * FROM dates', (err, rows) => {
+      if (err) {
+        console.error(err.message);
+      } else {
+        socket.emit('toutesDates', rows);
+      }
+    });
   });
 
   // Envoi de tous les messages
-  socket.on('getMessages', async () => {
-    try {
-      const messages = await Message.findAll();
-      socket.emit('getMessages', messages);
-    } catch (err) {
-      console.error(err.message);
-    }
+  socket.on('getMessages', () => {
+    db.all('SELECT * FROM messages', (err, rows) => {
+      if (err) {
+        console.error(err.message);
+      } else {
+        socket.emit('getMessages', rows);
+      }
+    });
   });
 
   // Marquer un message comme lu
-  socket.on('marquerLu', async (id) => {
-    try {
-      await Message.update({ read: true }, { where: { id } });
-      socket.emit('marquerLu', id);
-    } catch (err) {
-      console.error(err.message);
-    }
+  socket.on('marquerLu', (id) => {
+    const stmt = db.prepare('UPDATE messages SET read = 1 WHERE id = ?');
+    stmt.run(id, function (err) {
+      if (err) {
+        console.error(err.message);
+      } else {
+        socket.emit('marquerLu', id);
+      }
+    });
+    stmt.finalize();
   });
 
-  // Gestion de la déconnexion de l'utilisateur
   socket.on('logout', () => {
+    // Logique de déconnexion ici, par exemple :
+    // - Invalider le token de session de l'utilisateur
+    // - Supprimer la session utilisateur côté serveur
+    // - Autres tâches de nettoyage nécessaires
+
     socket.emit('logoutSuccess');
     console.log('Utilisateur déconnecté: ', socket.id);
+
   });
 
   // Réception d'une demande de messages filtrés
-  socket.on('filterMessages', async (filter) => {
-    try {
-      let where = {};
-      if (filter === 'read') {
-        where.read = true;
-      } else if (filter === 'unread') {
-        where.read = false;
-      }
-      const messages = await Message.findAll({ where });
-      socket.emit('getMessages', messages);
-    } catch (err) {
-      console.error(err.message);
+  socket.on('filterMessages', (filter) => {
+    let query = 'SELECT * FROM messages';
+    if (filter === 'read') {
+        query += ' WHERE read = 1';
+    } else if (filter === 'unread') {
+        query += ' WHERE read = 0';
     }
+    
+    db.all(query, (err, rows) => {
+        if (err) {
+            console.error(err.message);
+        } else {
+            socket.emit('getMessages', rows);
+        }
+    });
+});
+
+  socket.on('disconnect', () => {
   });
 
-  // Gestion de la déconnexion de socket
-  socket.on('disconnect', () => {
-    console.log('Utilisateur déconnecté: ', socket.id);
-  });
 });
 
 // Créer un admin par défaut (à utiliser uniquement pour initialiser la base de données)
@@ -143,26 +168,24 @@ const createDefaultAdmin = async () => {
   const password = 'password';
   const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-  try {
-    console.log('username',username,'hashedPassword',hashedPassword);
-    await Admin.create({ username:username, password: hashedPassword });
-    console.log('Admin créé');
-  } catch (err) {
-    if (err.name === 'SequelizeUniqueConstraintError') {
+  const stmt = db.prepare('INSERT INTO admin (username, password) VALUES (?, ?)');
+  stmt.run(username, hashedPassword, function (err) {
+    if (err && err.message.includes('UNIQUE constraint failed')) {
       console.log('Admin déjà créé');
-    } else {
-      console.log('ICI');
+    } else if (err) {
       console.error(err.message);
+    } else {
+      console.log('Admin créé');
     }
-  }
+  });
+  stmt.finalize();
 };
 
-// Synchroniser la base de données et démarrer le serveur
-sequelize.sync().then(async () => {
-  console.log('Database & tables created!');
-  await createDefaultAdmin();
+createDefaultAdmin();
 
-  server.listen(8080, () => {
-    console.log('Le serveur écoute sur le port 8080');
-  });
+
+
+
+server.listen(8080, () => {
+  console.log('Le serveur écoute sur le port 8080');
 });
