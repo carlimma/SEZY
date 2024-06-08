@@ -17,6 +17,9 @@ const Admin = sequelize.define('Admin', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+}, {
+  // Options du modèle
+  tableName: 'Admin' // Nom de la table dans la base de données
 });
 
 module.exports = Admin;
