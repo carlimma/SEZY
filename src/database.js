@@ -7,4 +7,13 @@ const sequelize = new Sequelize('sezydb', 'sezydb_user', 'SvfXGPdXPK46HzmjGnIixi
   port: 5432, // Par défaut pour PostgreSQL
 });
 
-module.exports = sequelize;
+const Admin = require('./models/Admin');
+const Message = require('./models/Message');
+const DateModel = require('./models/Date');
+
+module.exports = {
+  sequelize,
+  Admin,
+  Message,
+  DateModel,
+};
