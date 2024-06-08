@@ -12,7 +12,7 @@ const io = new Server(server, {
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 const cors = require('cors');
-const sequelize = require('./db'); // Importer Sequelize
+const sequelize = require('./database'); // Importer Sequelize
 
 app.use(cors());
 
