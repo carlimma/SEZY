@@ -34,6 +34,46 @@ const db = new Client({
 
 db.connect();
 
+// Fonction pour initialiser la base de données
+const initializeDatabase = async () => {
+  try {
+    // Créer la table "admin" si elle n'existe pas
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS admin (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL
+      )
+    `);
+
+    // Créer la table "messages" si elle n'existe pas
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS messages (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        phone VARCHAR(50),
+        content TEXT NOT NULL,
+        read BOOLEAN DEFAULT FALSE
+      )
+    `);
+
+    // Créer la table "dates" si elle n'existe pas
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS dates (
+        id SERIAL PRIMARY KEY,
+        date DATE NOT NULL,
+        destination VARCHAR(255) NOT NULL,
+        prix DECIMAL NOT NULL
+      )
+    `);
+
+    console.log('Tables créées ou existent déjà');
+  } catch (err) {
+    console.error('Erreur lors de la création des tables:', err.message);
+  }
+}; 
+
 // Gestion des connexions socket
 io.on('connection', (socket) => {
   
@@ -179,8 +219,16 @@ const createDefaultAdmin = async () => {
   });
 };
 
-createDefaultAdmin();
+// Initialiser la base de données et créer l'admin par défaut
+const initializeApp = async () => {
+  await initializeDatabase();
+  await createDefaultAdmin();
+};
 
-server.listen(8080, () => {
-  console.log('Le serveur écoute sur le port 8080');
+initializeApp().then(() => {
+  server.listen(8080, () => {
+    console.log('Le serveur écoute sur le port 8080');
+  });
+}).catch((err) => {
+  console.error('Erreur lors de l\'initialisation de l\'application:', err.message);
 });
