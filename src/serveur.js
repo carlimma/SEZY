@@ -9,7 +9,7 @@ const io = new Server(server, {
     methods: ['GET', 'POST']
   }
 });
-const db = require('./database');
+const { Client } = require('pg');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 const cors = require('cors');
@@ -23,36 +23,45 @@ app.use('/css', express.static(__dirname + '/css'));
 app.use('/js', express.static(__dirname + '/js'));
 app.use('/assets', express.static(__dirname + '/assets'));
 
+// Configuration de la base de données PostgreSQL
+const db = new Client({
+  user: 'adminsezy', // Remplacez par votre nom d'utilisateur PostgreSQL
+  host: 'dpg-cpi6bn21hbls73bcu7j0-a', // Remplacez par votre hôte PostgreSQL
+  database: 'sezydb_jui6', // Remplacez par le nom de votre base de données
+  password: 'AHL4mIilb2gGMqdrAFXKcnQ4y9dxjELe', // Remplacez par votre mot de passe PostgreSQL
+  port: 5432, // Par défaut, le port de PostgreSQL est 5432
+});
+
+db.connect();
+
 // Gestion des connexions socket
 io.on('connection', (socket) => {
   
   // Réception d'un nouveau message
   socket.on('nouveauMessage', (data) => {
     const { name, email, phone, message } = data;
-    const stmt = db.prepare('INSERT INTO messages (name, email, phone, content) VALUES (?, ?, ?, ?)');
-    stmt.run(name, email, phone, message, function (err) {
+    const query = 'INSERT INTO messages (name, email, phone, content) VALUES ($1, $2, $3, $4)';
+    db.query(query, [name, email, phone, message], (err, res) => {
       if (err) {
         console.error(err.message);
         socket.emit('nouveauMessage', { "success": false });
-
       } else {
         socket.emit('nouveauMessage', { "success": true });
-
       }
     });
-    stmt.finalize();
   });
 
   // Réception d'une demande de connexion
   socket.on('connexionAdmin', (data) => {
     const { username, password } = data;
-    const stmt = db.prepare('SELECT * FROM admin WHERE username = ?');
-    stmt.get(username, (err, row) => {
-      if (err || !row) {
+    const query = 'SELECT * FROM admin WHERE username = $1';
+    db.query(query, [username], (err, result) => {
+      if (err || result.rows.length === 0) {
         socket.emit('erreurConnexion');
       } else {
-        bcrypt.compare(password, row.password, (err, result) => {
-          if (result) {
+        const row = result.rows[0];
+        bcrypt.compare(password, row.password, (err, res) => {
+          if (res) {
             console.log('Un utilisateur est connecté');
             socket.emit('connexionReussie');
           } else {
@@ -61,14 +70,13 @@ io.on('connection', (socket) => {
         });
       }
     });
-    stmt.finalize();
   });
 
   // Réception d'une demande d'ajout de date
   socket.on('nouvelleLivraison', (data) => {
     const { date, destination, prix } = data;
-    const stmt = db.prepare('INSERT INTO dates (date, destination, prix) VALUES (?, ?, ?)');
-    stmt.run(date, destination, prix, function (err) {
+    const query = 'INSERT INTO dates (date, destination, prix) VALUES ($1, $2, $3)';
+    db.query(query, [date, destination, prix], (err, res) => {
       if (err) {
         console.error(err.message);
         socket.emit('erreurAjoutDate');
@@ -76,13 +84,12 @@ io.on('connection', (socket) => {
         socket.emit('dateAjoutee');
       }
     });
-    stmt.finalize();
   });
 
   // Réception d'une demande de suppression de date
   socket.on('suppressionDate', (id) => {
-    const stmt = db.prepare('DELETE FROM dates WHERE id = ?');
-    stmt.run(id, function (err) {
+    const query = 'DELETE FROM dates WHERE id = $1';
+    db.query(query, [id], (err, res) => {
       if (err) {
         console.error(err.message);
         socket.emit('erreurSuppressionDate');
@@ -90,53 +97,47 @@ io.on('connection', (socket) => {
         socket.emit('dateSupprimee');
       }
     });
-    stmt.finalize();
   });
 
   // Envoi de toutes les dates présentes dans la base de données
   socket.on('obtenirDates', () => {
-    db.all('SELECT * FROM dates', (err, rows) => {
+    const query = 'SELECT * FROM dates';
+    db.query(query, (err, result) => {
       if (err) {
         console.error(err.message);
       } else {
-        socket.emit('toutesDates', rows);
+        socket.emit('toutesDates', result.rows);
       }
     });
   });
 
   // Envoi de tous les messages
   socket.on('getMessages', () => {
-    db.all('SELECT * FROM messages', (err, rows) => {
+    const query = 'SELECT * FROM messages';
+    db.query(query, (err, result) => {
       if (err) {
         console.error(err.message);
       } else {
-        socket.emit('getMessages', rows);
+        socket.emit('getMessages', result.rows);
       }
     });
   });
 
   // Marquer un message comme lu
   socket.on('marquerLu', (id) => {
-    const stmt = db.prepare('UPDATE messages SET read = 1 WHERE id = ?');
-    stmt.run(id, function (err) {
+    const query = 'UPDATE messages SET read = 1 WHERE id = $1';
+    db.query(query, [id], (err, res) => {
       if (err) {
         console.error(err.message);
       } else {
         socket.emit('marquerLu', id);
       }
     });
-    stmt.finalize();
   });
 
   socket.on('logout', () => {
-    // Logique de déconnexion ici, par exemple :
-    // - Invalider le token de session de l'utilisateur
-    // - Supprimer la session utilisateur côté serveur
-    // - Autres tâches de nettoyage nécessaires
-
     socket.emit('logoutSuccess');
     console.log('Utilisateur déconnecté: ', socket.id);
-
   });
 
   // Réception d'une demande de messages filtrés
@@ -148,14 +149,14 @@ io.on('connection', (socket) => {
         query += ' WHERE read = 0';
     }
     
-    db.all(query, (err, rows) => {
+    db.query(query, (err, result) => {
         if (err) {
             console.error(err.message);
         } else {
-            socket.emit('getMessages', rows);
+            socket.emit('getMessages', result.rows);
         }
     });
-});
+  });
 
   socket.on('disconnect', () => {
   });
@@ -168,23 +169,17 @@ const createDefaultAdmin = async () => {
   const password = 'password';
   const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-  const stmt = db.prepare('INSERT INTO admin (username, password) VALUES (?, ?)');
-  stmt.run(username, hashedPassword, function (err) {
-    if (err && err.message.includes('UNIQUE constraint failed')) {
-      console.log('Admin déjà créé');
-    } else if (err) {
+  const query = 'INSERT INTO admin (username, password) VALUES ($1, $2) ON CONFLICT DO NOTHING';
+  db.query(query, [username, hashedPassword], (err, res) => {
+    if (err) {
       console.error(err.message);
     } else {
       console.log('Admin créé');
     }
   });
-  stmt.finalize();
 };
 
 createDefaultAdmin();
-
-
-
 
 server.listen(8080, () => {
   console.log('Le serveur écoute sur le port 8080');
