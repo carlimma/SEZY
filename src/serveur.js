@@ -165,7 +165,7 @@ io.on('connection', (socket) => {
 
   // Marquer un message comme lu
   socket.on('marquerLu', (id) => {
-    const query = 'UPDATE messages SET read = 1 WHERE id = $1';
+    const query = 'UPDATE messages SET read = TRUE WHERE id = $1';
     db.query(query, [id], (err, res) => {
       if (err) {
         console.error(err.message);
