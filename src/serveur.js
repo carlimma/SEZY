@@ -184,9 +184,9 @@ io.on('connection', (socket) => {
   socket.on('filterMessages', (filter) => {
     let query = 'SELECT * FROM messages';
     if (filter === 'read') {
-        query += ' WHERE read = 1';
+        query += ' WHERE read = TRUE';
     } else if (filter === 'unread') {
-        query += ' WHERE read = 0';
+        query += ' WHERE read = FALSE';
     }
     
     db.query(query, (err, result) => {
