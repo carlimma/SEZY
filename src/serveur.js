@@ -144,6 +144,7 @@ const createDefaultAdmin = async () => {
   const hashedPassword = await bcrypt.hash(password, saltRounds);
 
   try {
+    console.log('username',username,'hashedPassword',hashedPassword);
     await Admin.create({ username, password: hashedPassword });
     console.log('Admin créé');
   } catch (err) {
