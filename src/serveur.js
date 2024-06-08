@@ -145,7 +145,7 @@ const createDefaultAdmin = async () => {
 
   try {
     console.log('username',username,'hashedPassword',hashedPassword);
-    await Admin.create({ username, password: hashedPassword });
+    await Admin.create({ username:username, password: hashedPassword });
     console.log('Admin créé');
   } catch (err) {
     if (err.name === 'SequelizeUniqueConstraintError') {
