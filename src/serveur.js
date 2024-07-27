@@ -26,9 +26,9 @@ app.use('/assets', express.static(__dirname + '/assets'));
 // Configuration de la base de données PostgreSQL
 const db = new Client({
   user: 'adminsezy', // Remplacez par votre nom d'utilisateur PostgreSQL
-  host: 'dpg-cpi6bn21hbls73bcu7j0-a', // Remplacez par votre hôte PostgreSQL
-  database: 'sezydb_jui6', // Remplacez par le nom de votre base de données
-  password: 'AHL4mIilb2gGMqdrAFXKcnQ4y9dxjELe', // Remplacez par votre mot de passe PostgreSQL
+  host: 'dpg-cqimrm8gph6c738s2m30-a', // Remplacez par votre hôte PostgreSQL
+  database: 'sezydb_eo02', // Remplacez par le nom de votre base de données
+  password: '3opo7tnlcCVFJN4GBwF2jmqzWlIZqQTZ', // Remplacez par votre mot de passe PostgreSQL
   port: 5432, // Par défaut, le port de PostgreSQL est 5432
 });
 
